@@ -10,6 +10,7 @@ interface GenerationOptions {
   background: string;
   personality: string;
   motion: string;
+  aspectRatio: string;
 }
 
 interface GenerationResult {

@@ -88,7 +88,17 @@ const motionTypes = [
   { id: "tail-swish", label: "Balançando Rabo", emoji: "🐾", description: "Gracioso" },
 ];
 
-type Step = "breed" | "fur" | "eyes" | "accessory" | "background" | "personality" | "motion" | "generate";
+// Aspect ratios for image
+const aspectRatios = [
+  { id: "1:1", label: "1:1", description: "Quadrado", emoji: "⬜", width: 1024, height: 1024 },
+  { id: "16:9", label: "16:9", description: "Paisagem", emoji: "🖼️", width: 1920, height: 1080 },
+  { id: "9:16", label: "9:16", description: "Retrato", emoji: "📱", width: 1080, height: 1920 },
+  { id: "4:3", label: "4:3", description: "Clássico", emoji: "📺", width: 1024, height: 768 },
+  { id: "3:4", label: "3:4", description: "Retrato Clássico", emoji: "🖼️", width: 768, height: 1024 },
+  { id: "21:9", label: "21:9", description: "Ultrawide", emoji: "🎬", width: 1920, height: 823 },
+];
+
+type Step = "breed" | "fur" | "eyes" | "accessory" | "background" | "personality" | "motion" | "aspectRatio" | "generate";
 
 const steps: { id: Step; label: string; icon: React.ElementType }[] = [
   { id: "breed", label: "Raça", icon: Cat },
@@ -98,6 +108,7 @@ const steps: { id: Step; label: string; icon: React.ElementType }[] = [
   { id: "background", label: "Cenário", icon: ImageIcon },
   { id: "personality", label: "Expressão", icon: Heart },
   { id: "motion", label: "Movimento", icon: Video },
+  { id: "aspectRatio", label: "Tamanho", icon: ImageIcon },
   { id: "generate", label: "Criar!", icon: Wand2 },
 ];
 
@@ -110,6 +121,7 @@ const CriarVideo = () => {
   const [selectedBackground, setSelectedBackground] = useState(backgrounds[0].id);
   const [selectedPersonality, setSelectedPersonality] = useState(personalities[0].id);
   const [selectedMotion, setSelectedMotion] = useState(motionTypes[0].id);
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState(aspectRatios[0].id);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -157,6 +169,7 @@ const CriarVideo = () => {
     setSelectedBackground(backgrounds[0].id);
     setSelectedPersonality(personalities[0].id);
     setSelectedMotion(motionTypes[0].id);
+    setSelectedAspectRatio(aspectRatios[0].id);
     setCurrentStep("breed");
     resetGeneration();
   };
@@ -183,6 +196,7 @@ const CriarVideo = () => {
     const selectedBg = backgrounds.find(b => b.id === selectedBackground);
     const selectedPers = personalities.find(p => p.id === selectedPersonality);
     const selectedMot = motionTypes.find(m => m.id === selectedMotion);
+    const selectedRatio = aspectRatios.find(r => r.id === selectedAspectRatio);
 
     const result = await generateVideo({
       breed: selectedBreed?.label || "Persian",
@@ -192,6 +206,7 @@ const CriarVideo = () => {
       background: selectedBg?.label || "Galaxy",
       personality: selectedPers?.label || "Happy",
       motion: selectedMot?.label || "Breathing",
+      aspectRatio: selectedRatio?.id || "1:1",
     });
 
     // If generation was successful, increment the counter
@@ -427,6 +442,36 @@ const CriarVideo = () => {
                   <span className="text-4xl block mb-2">{m.emoji}</span>
                   <span className="font-semibold block">{m.label}</span>
                   <span className="text-xs text-muted-foreground">{m.description}</span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "aspectRatio":
+        return (
+          <div className="space-y-4">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold">Tamanho da Imagem 📐</h2>
+              <p className="text-muted-foreground">Escolha a proporção ideal para sua imagem</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {aspectRatios.map((ratio) => (
+                <motion.button
+                  key={ratio.id}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedAspectRatio(ratio.id)}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    selectedAspectRatio === ratio.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <span className="text-4xl block mb-2">{ratio.emoji}</span>
+                  <span className="font-semibold block">{ratio.label}</span>
+                  <span className="text-xs text-muted-foreground">{ratio.description}</span>
+                  <span className="text-xs text-muted-foreground/70 block mt-1">{ratio.width}x{ratio.height}</span>
                 </motion.button>
               ))}
             </div>
