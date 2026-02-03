@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Cat, Sparkles, Crown, RotateCcw, Loader2, ChevronRight, Palette, Eye, Shirt, ImageIcon, Heart, Wand2, Video } from "lucide-react";
+import { Cat, Sparkles, Crown, RotateCcw, Loader2, ChevronRight, Palette, Eye, Shirt, ImageIcon, Heart, Wand2, Video, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { useGenerateCatVideo } from "@/hooks/useGenerateCatVideo";
 
 // Cat breed options
 const catTypes = [
@@ -106,8 +107,9 @@ const CriarVideo = () => {
   const [selectedBackground, setSelectedBackground] = useState(backgrounds[0].id);
   const [selectedPersonality, setSelectedPersonality] = useState(personalities[0].id);
   const [selectedMotion, setSelectedMotion] = useState(motionTypes[0].id);
-  const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
+  
+  const { isGenerating, generatedImage, generateVideo, resetGeneration } = useGenerateCatVideo();
 
   const getStepIndex = (step: Step) => steps.findIndex(s => s.id === step);
 
@@ -134,10 +136,39 @@ const CriarVideo = () => {
     setSelectedPersonality(personalities[0].id);
     setSelectedMotion(motionTypes[0].id);
     setCurrentStep("breed");
+    resetGeneration();
   };
 
   const handleGenerateVideo = async () => {
-    toast.info("Ative o Lovable Cloud para usar a geração de vídeos com IA! 🎬");
+    const selectedBreed = catTypes.find(c => c.id === selectedCatType);
+    const selectedFur = furColors.find(c => c.id === selectedFurColor);
+    const selectedEye = eyeColors.find(c => c.id === selectedEyeColor);
+    const selectedAcc = accessories.find(a => a.id === selectedAccessory);
+    const selectedBg = backgrounds.find(b => b.id === selectedBackground);
+    const selectedPers = personalities.find(p => p.id === selectedPersonality);
+    const selectedMot = motionTypes.find(m => m.id === selectedMotion);
+
+    await generateVideo({
+      breed: selectedBreed?.label || "Persian",
+      furColor: selectedFur?.label || "Orange",
+      eyeColor: selectedEye?.label || "Blue",
+      accessory: selectedAcc?.label || "none",
+      background: selectedBg?.label || "Galaxy",
+      personality: selectedPers?.label || "Happy",
+      motion: selectedMot?.label || "Breathing",
+    });
+  };
+
+  const handleDownloadImage = () => {
+    if (generatedImage) {
+      const link = document.createElement("a");
+      link.href = generatedImage;
+      link.download = `gatinho-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Imagem baixada! 📥");
+    }
   };
 
   const getSelectedFurColor = () => furColors.find(c => c.id === selectedFurColor);
@@ -348,39 +379,95 @@ const CriarVideo = () => {
       case "generate":
         return (
           <div className="space-y-6 text-center">
-            <h2 className="text-2xl font-bold">Pronto para criar! 🎉</h2>
+            <h2 className="text-2xl font-bold">
+              {generatedImage ? "Seu Gatinho Ficou Lindo! 🎉" : "Pronto para criar! 🎉"}
+            </h2>
             <p className="text-muted-foreground">
-              Seu vídeo de gatinho está configurado. Clique no botão para gerar!
+              {generatedImage 
+                ? "Sua imagem foi gerada com IA ultra-realista!"
+                : "Seu gatinho está configurado. Clique no botão para gerar!"
+              }
             </p>
             
-            <Card className="p-6 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-              <div className="text-6xl mb-4">🐱🎬</div>
-              <p className="font-medium">
-                Raça: {catTypes.find(c => c.id === selectedCatType)?.label}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Movimento: {motionTypes.find(m => m.id === selectedMotion)?.label}
-              </p>
-            </Card>
+            {generatedImage ? (
+              <div className="space-y-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="relative rounded-2xl overflow-hidden border-4 border-primary/30 shadow-2xl"
+                >
+                  <img 
+                    src={generatedImage} 
+                    alt="Gatinho gerado com IA" 
+                    className="w-full max-w-lg mx-auto"
+                  />
+                </motion.div>
+                
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <Button
+                    onClick={handleDownloadImage}
+                    className="btn-gradient text-primary-foreground"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Baixar Imagem
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleGenerateVideo}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    )}
+                    Gerar Novamente
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReset}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Novo Gatinho
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Card className="p-6 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
+                  <div className="text-6xl mb-4">🐱✨</div>
+                  <p className="font-medium">
+                    Raça: {catTypes.find(c => c.id === selectedCatType)?.label}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Pelo: {furColors.find(c => c.id === selectedFurColor)?.label} • 
+                    Olhos: {eyeColors.find(c => c.id === selectedEyeColor)?.label}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Cenário: {backgrounds.find(b => b.id === selectedBackground)?.label}
+                  </p>
+                </Card>
 
-            <Button
-              size="lg"
-              onClick={handleGenerateVideo}
-              disabled={isGenerating}
-              className="btn-gradient text-primary-foreground font-bold text-lg px-8 py-6 rounded-2xl"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Gerando vídeo...
-                </>
-              ) : (
-                <>
-                  <Video className="w-5 h-5 mr-2" />
-                  Gerar Vídeo com IA
-                </>
-              )}
-            </Button>
+                <Button
+                  size="lg"
+                  onClick={handleGenerateVideo}
+                  disabled={isGenerating}
+                  className="btn-gradient text-primary-foreground font-bold text-lg px-8 py-6 rounded-2xl"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Gerando com IA...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Gerar Imagem com IA
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         );
     }
