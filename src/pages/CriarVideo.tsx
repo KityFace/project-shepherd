@@ -118,7 +118,14 @@ const CriarVideo = () => {
   // Check for success query param (after Stripe checkout)
   useEffect(() => {
     if (searchParams.get("success") === "true") {
-      toast.success("Assinatura Premium ativada! 🎉 Agora você pode gerar vídeos ilimitados!");
+      // Show premium welcome toast with custom styling
+      toast.success(
+        "🎉 Parabéns! Você agora é Premium!", 
+        {
+          description: "Aproveite gerações ilimitadas de gatinhos! Seu status Premium está ativo.",
+          duration: 8000,
+        }
+      );
       refreshSubscription();
       // Clean up URL
       navigate("/criar-video", { replace: true });

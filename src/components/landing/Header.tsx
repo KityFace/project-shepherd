@@ -1,8 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Cat } from "lucide-react";
+import { Cat, Crown, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 export const Header = () => {
+  const { user, subscription, signOut, isLoading } = useAuth();
+  const isPremium = subscription?.subscribed ?? false;
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -25,16 +30,50 @@ export const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link to="/login">
-            <Button variant="ghost" className="font-semibold">
-              Entrar
-            </Button>
-          </Link>
-          <Link to="/cadastro">
-            <Button className="btn-gradient font-semibold text-primary-foreground border-0">
-              Começar Grátis
-            </Button>
-          </Link>
+          {isLoading ? (
+            <div className="w-24 h-9 bg-muted animate-pulse rounded-md" />
+          ) : user ? (
+            <>
+              {/* Premium Badge */}
+              {isPremium && (
+                <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 gap-1 px-3 py-1">
+                  <Crown className="w-3.5 h-3.5" />
+                  Premium
+                </Badge>
+              )}
+              
+              {/* User info */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline max-w-[120px] truncate">
+                  {user.email}
+                </span>
+              </div>
+
+              {/* Sign out */}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={signOut}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" className="font-semibold">
+                  Entrar
+                </Button>
+              </Link>
+              <Link to="/cadastro">
+                <Button className="btn-gradient font-semibold text-primary-foreground border-0">
+                  Começar Grátis
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
