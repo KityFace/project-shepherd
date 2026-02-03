@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useGenerateCatVideo } from "@/hooks/useGenerateCatVideo";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { AnimatedCatVideo } from "@/components/AnimatedCatVideo";
 
 // Cat breed options
 const catTypes = [
@@ -560,27 +561,18 @@ const CriarVideo = () => {
             )}
             
             {generatedImage ? (
-              <div className="space-y-4">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="relative rounded-2xl overflow-hidden border-4 border-primary/30 shadow-2xl"
-                >
-                  <img 
-                    src={generatedImage} 
-                    alt="Gatinho gerado com IA" 
-                    className="w-full max-w-lg mx-auto"
-                  />
-                </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <AnimatedCatVideo
+                  imageUrl={generatedImage}
+                  motionType={selectedMotion}
+                  onDownload={handleDownloadImage}
+                />
                 
-                <div className="flex gap-3 justify-center flex-wrap">
-                  <Button
-                    onClick={handleDownloadImage}
-                    className="btn-gradient text-primary-foreground"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Baixar Imagem
-                  </Button>
+                <div className="flex gap-3 justify-center flex-wrap mt-4">
                   <Button
                     variant="outline"
                     onClick={handleGenerateVideo}
@@ -601,7 +593,7 @@ const CriarVideo = () => {
                     Novo Gatinho
                   </Button>
                 </div>
-              </div>
+              </motion.div>
             ) : (
               user && (
                 <>
