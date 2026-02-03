@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Cat, Sparkles, Crown, RotateCcw, Loader2, ChevronRight, Palette, Eye, Shirt, ImageIcon, Heart, Wand2, Video, Download, RefreshCw } from "lucide-react";
+import { Cat, Sparkles, Crown, RotateCcw, Loader2, ChevronRight, Palette, Eye, Shirt, ImageIcon, Heart, Wand2, Video, Download, RefreshCw, Lock, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useGenerateCatVideo } from "@/hooks/useGenerateCatVideo";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 // Cat breed options
 const catTypes = [
@@ -87,7 +89,7 @@ const motionTypes = [
 
 type Step = "breed" | "fur" | "eyes" | "accessory" | "background" | "personality" | "motion" | "generate";
 
-const steps: { id: Step; label: string; icon: any }[] = [
+const steps: { id: Step; label: string; icon: React.ElementType }[] = [
   { id: "breed", label: "Raça", icon: Cat },
   { id: "fur", label: "Pelo", icon: Palette },
   { id: "eyes", label: "Olhos", icon: Eye },
@@ -108,8 +110,20 @@ const CriarVideo = () => {
   const [selectedPersonality, setSelectedPersonality] = useState(personalities[0].id);
   const [selectedMotion, setSelectedMotion] = useState(motionTypes[0].id);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const { isGenerating, generatedImage, generateVideo, resetGeneration } = useGenerateCatVideo();
+  const { user, subscription, canGenerate, remainingGenerations, refreshSubscription, isLoading } = useAuth();
+
+  // Check for success query param (after Stripe checkout)
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      toast.success("Assinatura Premium ativada! 🎉 Agora você pode gerar vídeos ilimitados!");
+      refreshSubscription();
+      // Clean up URL
+      navigate("/criar-video", { replace: true });
+    }
+  }, [searchParams, navigate, refreshSubscription]);
 
   const getStepIndex = (step: Step) => steps.findIndex(s => s.id === step);
 
@@ -140,6 +154,20 @@ const CriarVideo = () => {
   };
 
   const handleGenerateVideo = async () => {
+    // Check if user is logged in
+    if (!user) {
+      toast.error("Você precisa fazer login para gerar imagens!");
+      navigate("/login");
+      return;
+    }
+
+    // Check if user can generate
+    if (!canGenerate) {
+      toast.error("Você atingiu o limite de 3 gerações gratuitas! Assine o Premium para continuar.");
+      navigate("/assinar-premium");
+      return;
+    }
+
     const selectedBreed = catTypes.find(c => c.id === selectedCatType);
     const selectedFur = furColors.find(c => c.id === selectedFurColor);
     const selectedEye = eyeColors.find(c => c.id === selectedEyeColor);
@@ -148,7 +176,7 @@ const CriarVideo = () => {
     const selectedPers = personalities.find(p => p.id === selectedPersonality);
     const selectedMot = motionTypes.find(m => m.id === selectedMotion);
 
-    await generateVideo({
+    const result = await generateVideo({
       breed: selectedBreed?.label || "Persian",
       furColor: selectedFur?.label || "Orange",
       eyeColor: selectedEye?.label || "Blue",
@@ -157,6 +185,12 @@ const CriarVideo = () => {
       personality: selectedPers?.label || "Happy",
       motion: selectedMot?.label || "Breathing",
     });
+
+    // If generation was successful, increment the counter
+    if (result?.success) {
+      await supabase.functions.invoke("increment-generation");
+      refreshSubscription();
+    }
   };
 
   const handleDownloadImage = () => {
@@ -171,7 +205,22 @@ const CriarVideo = () => {
     }
   };
 
+  const handleSubscribe = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      toast.error("Erro ao iniciar checkout. Tente novamente.");
+    }
+  };
+
   const getSelectedFurColor = () => furColors.find(c => c.id === selectedFurColor);
+
+  const isPremium = subscription?.subscribed ?? false;
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -389,6 +438,70 @@ const CriarVideo = () => {
               }
             </p>
             
+            {/* Show login prompt if not logged in */}
+            {!user && !isLoading && (
+              <Card className="p-6 bg-amber-500/10 border-amber-500/30">
+                <div className="flex items-center justify-center gap-2 text-amber-600 mb-3">
+                  <LogIn className="w-5 h-5" />
+                  <span className="font-semibold">Faça login para gerar</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Você precisa estar logado para gerar imagens de gatinhos!
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Link to="/login">
+                    <Button>Fazer Login</Button>
+                  </Link>
+                  <Link to="/cadastro">
+                    <Button variant="outline">Criar Conta</Button>
+                  </Link>
+                </div>
+              </Card>
+            )}
+
+            {/* Show limit warning for free users */}
+            {user && !isPremium && (
+              <Card className="p-4 bg-primary/5 border-primary/20">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  {canGenerate ? (
+                    <>
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      <span className="font-semibold text-primary">
+                        {remainingGenerations === 1 
+                          ? "Última geração gratuita!" 
+                          : `${remainingGenerations} gerações restantes`}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-5 h-5 text-destructive" />
+                      <span className="font-semibold text-destructive">
+                        Limite atingido!
+                      </span>
+                    </>
+                  )}
+                </div>
+                {!canGenerate && (
+                  <Button onClick={handleSubscribe} className="btn-gradient text-primary-foreground mt-2">
+                    <Crown className="w-4 h-4 mr-2" />
+                    Assinar Premium - R$ 9,80/mês
+                  </Button>
+                )}
+              </Card>
+            )}
+
+            {/* Show premium badge */}
+            {isPremium && (
+              <Card className="p-4 bg-accent/10 border-accent/30">
+                <div className="flex items-center justify-center gap-2">
+                  <Crown className="w-5 h-5 text-accent" />
+                  <span className="font-semibold text-accent">
+                    Premium Ativo - Gerações Ilimitadas! ✨
+                  </span>
+                </div>
+              </Card>
+            )}
+            
             {generatedImage ? (
               <div className="space-y-4">
                 <motion.div
@@ -414,7 +527,7 @@ const CriarVideo = () => {
                   <Button
                     variant="outline"
                     onClick={handleGenerateVideo}
-                    disabled={isGenerating}
+                    disabled={isGenerating || !canGenerate}
                   >
                     {isGenerating ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -433,40 +546,42 @@ const CriarVideo = () => {
                 </div>
               </div>
             ) : (
-              <>
-                <Card className="p-6 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-                  <div className="text-6xl mb-4">🐱✨</div>
-                  <p className="font-medium">
-                    Raça: {catTypes.find(c => c.id === selectedCatType)?.label}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Pelo: {furColors.find(c => c.id === selectedFurColor)?.label} • 
-                    Olhos: {eyeColors.find(c => c.id === selectedEyeColor)?.label}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Cenário: {backgrounds.find(b => b.id === selectedBackground)?.label}
-                  </p>
-                </Card>
+              user && (
+                <>
+                  <Card className="p-6 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
+                    <div className="text-6xl mb-4">🐱✨</div>
+                    <p className="font-medium">
+                      Raça: {catTypes.find(c => c.id === selectedCatType)?.label}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Pelo: {furColors.find(c => c.id === selectedFurColor)?.label} • 
+                      Olhos: {eyeColors.find(c => c.id === selectedEyeColor)?.label}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Cenário: {backgrounds.find(b => b.id === selectedBackground)?.label}
+                    </p>
+                  </Card>
 
-                <Button
-                  size="lg"
-                  onClick={handleGenerateVideo}
-                  disabled={isGenerating}
-                  className="btn-gradient text-primary-foreground font-bold text-lg px-8 py-6 rounded-2xl"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Gerando com IA...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5 mr-2" />
-                      Gerar Imagem com IA
-                    </>
-                  )}
-                </Button>
-              </>
+                  <Button
+                    size="lg"
+                    onClick={handleGenerateVideo}
+                    disabled={isGenerating || !canGenerate}
+                    className="btn-gradient text-primary-foreground font-bold text-lg px-8 py-6 rounded-2xl"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Gerando com IA...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Gerar Imagem com IA
+                      </>
+                    )}
+                  </Button>
+                </>
+              )
             )}
           </div>
         );
@@ -490,12 +605,34 @@ const CriarVideo = () => {
               <RotateCcw className="w-4 h-4 mr-2" />
               Resetar
             </Button>
-            <Link to="/precos">
+            {isPremium ? (
               <Button variant="outline" size="sm" className="border-accent text-accent">
                 <Crown className="w-4 h-4 mr-2" />
-                Premium
+                Premium ✓
               </Button>
-            </Link>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-accent text-accent"
+                onClick={handleSubscribe}
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Assinar Premium
+              </Button>
+            )}
+            {user ? (
+              <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
+                Sair
+              </Button>
+            ) : (
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </header>
