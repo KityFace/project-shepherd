@@ -13,6 +13,7 @@ interface VideoRequest {
   background: string;
   personality: string;
   motion: string;
+  aspectRatio: string;
 }
 
 serve(async (req) => {
@@ -26,10 +27,10 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { breed, furColor, eyeColor, accessory, background, personality, motion }: VideoRequest = await req.json();
+    const { breed, furColor, eyeColor, accessory, background, personality, motion, aspectRatio }: VideoRequest = await req.json();
 
-    // Create a detailed prompt for image generation
-    const imagePrompt = `Ultra realistic, 4K high resolution photograph of an adorable ${breed} cat with ${furColor} fur and ${eyeColor} eyes. The cat has a ${personality} expression on its face. ${accessory !== 'none' ? `The cat is wearing a ${accessory}.` : ''} The cat is in a ${background} setting. Professional photography, cinematic lighting, highly detailed fur texture, photorealistic, award-winning photo quality. The image should capture the cat in a pose suggesting ${motion} movement.`;
+    // Create a detailed prompt for image generation with aspect ratio
+    const imagePrompt = `Ultra realistic, 4K high resolution photograph of an adorable ${breed} cat with ${furColor} fur and ${eyeColor} eyes. The cat has a ${personality} expression on its face. ${accessory !== 'none' ? `The cat is wearing a ${accessory}.` : ''} The cat is in a ${background} setting. Professional photography, cinematic lighting, highly detailed fur texture, photorealistic, award-winning photo quality. The image should capture the cat in a pose suggesting ${motion} movement. Image aspect ratio: ${aspectRatio}.`;
 
     console.log("Generating cat image with prompt:", imagePrompt);
 
