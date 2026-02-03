@@ -1,27 +1,65 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Sparkles, Video, Clock, X, Loader2, Cat } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AssinarPremium = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const { user, subscription, refreshSubscription } = useAuth();
+
+  // Check for canceled query param
+  useEffect(() => {
+    if (searchParams.get("canceled") === "true") {
+      toast.info("Checkout cancelado. Você pode tentar novamente quando quiser!");
+      navigate("/assinar-premium", { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   const handleSubscribe = async () => {
+    if (!user) {
+      toast.error("Você precisa fazer login primeiro!");
+      navigate("/login");
+      return;
+    }
+
     setLoading(true);
-    // TODO: Integrate with Stripe when Cloud is enabled
     try {
-      toast.info("Funcionalidade de pagamento será ativada com o Lovable Cloud!");
-      setTimeout(() => {
-        setLoading(false);
-        navigate("/cadastro");
-      }, 1500);
+      const { data, error } = await supabase.functions.invoke("create-checkout");
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
     } catch (error) {
       console.error("Error creating checkout:", error);
       toast.error("Erro ao criar sessão de pagamento. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (error) {
+      console.error("Error opening portal:", error);
+      toast.error("Erro ao abrir portal de assinatura.");
+    } finally {
       setLoading(false);
     }
   };
@@ -146,23 +184,44 @@ const AssinarPremium = () => {
                   </li>
                 ))}
               </ul>
-              <Button
-                className="w-full mt-6 bg-primary hover:bg-primary/90"
-                onClick={handleSubscribe}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <Crown className="h-4 w-4 mr-2" />
-                    Assinar Premium
-                  </>
-                )}
-              </Button>
+              {subscription?.subscribed ? (
+                <Button
+                  className="w-full mt-6"
+                  variant="outline"
+                  onClick={handleManageSubscription}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Abrindo...
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="h-4 w-4 mr-2" />
+                      Gerenciar Assinatura
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full mt-6 bg-primary hover:bg-primary/90"
+                  onClick={handleSubscribe}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="h-4 w-4 mr-2" />
+                      Assinar Premium
+                    </>
+                  )}
+                </Button>
+              )}
               <p className="text-xs text-center text-muted-foreground mt-3">
                 Cancele quando quiser. Sem compromisso.
               </p>
