@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Cat, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Cadastro = () => {
   const [name, setName] = useState("");
@@ -38,17 +39,46 @@ const Cadastro = () => {
 
     setLoading(true);
 
-    // TODO: Integrate with Supabase auth when Cloud is enabled
     try {
-      toast({
-        title: "Conta criada com sucesso! 🎉",
-        description: "Você pode agora fazer login.",
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: name,
+          },
+          emailRedirectTo: window.location.origin,
+        },
       });
-      navigate("/login");
+
+      if (error) throw error;
+
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        toast({
+          title: "Verifique seu email! 📧",
+          description: "Enviamos um link de confirmação para o seu email. Clique nele para ativar sua conta.",
+        });
+        navigate("/login");
+      } else {
+        toast({
+          title: "Conta criada com sucesso! 🎉",
+          description: "Você já pode começar a criar seus gatinhos!",
+        });
+        navigate("/criar-video");
+      }
     } catch (error: any) {
+      let errorMessage = "Tente novamente mais tarde.";
+      
+      if (error.message.includes("User already registered")) {
+        errorMessage = "Este email já está cadastrado. Tente fazer login.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro ao criar conta",
-        description: error.message || "Tente novamente mais tarde.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
