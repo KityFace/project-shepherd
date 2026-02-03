@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Cat, Crown, LogOut, User } from "lucide-react";
+import { Cat, Crown, LogOut, User, Sparkles, Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 
 export const Header = () => {
   const { user, subscription, signOut, isLoading } = useAuth();
@@ -34,12 +34,44 @@ export const Header = () => {
             <div className="w-24 h-9 bg-muted animate-pulse rounded-md" />
           ) : user ? (
             <>
-              {/* Premium Badge */}
+              {/* Premium Badge - Elaborado */}
               {isPremium && (
-                <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 gap-1 px-3 py-1">
-                  <Crown className="w-3.5 h-3.5" />
-                  Premium
-                </Badge>
+                <motion.div
+                  initial={{ scale: 0, rotate: -10 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  className="relative"
+                >
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white shadow-lg">
+                    <motion.div
+                      animate={{ 
+                        rotate: [0, -10, 10, -10, 0],
+                        scale: [1, 1.1, 1]
+                      }}
+                      transition={{ 
+                        duration: 2, 
+                        repeat: Infinity,
+                        repeatDelay: 3
+                      }}
+                    >
+                      <Trophy className="w-4 h-4" />
+                    </motion.div>
+                    <span className="font-bold text-sm">Premium</span>
+                    <motion.div
+                      animate={{ 
+                        opacity: [0.5, 1, 0.5],
+                        scale: [0.8, 1.2, 0.8]
+                      }}
+                      transition={{ 
+                        duration: 1.5, 
+                        repeat: Infinity 
+                      }}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                    </motion.div>
+                  </div>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 blur-md opacity-40 -z-10" />
+                </motion.div>
               )}
               
               {/* User info */}

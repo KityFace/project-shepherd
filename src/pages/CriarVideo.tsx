@@ -497,16 +497,66 @@ const CriarVideo = () => {
               </Card>
             )}
 
-            {/* Show premium badge */}
+            {/* Show premium badge - Luxuoso */}
             {isPremium && (
-              <Card className="p-4 bg-accent/10 border-accent/30">
-                <div className="flex items-center justify-center gap-2">
-                  <Crown className="w-5 h-5 text-accent" />
-                  <span className="font-semibold text-accent">
-                    Premium Ativo - Gerações Ilimitadas! ✨
-                  </span>
-                </div>
-              </Card>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative"
+              >
+                <Card className="p-6 overflow-hidden border-2 border-amber-400/50 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-rose-950/30">
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-400/20 to-transparent rounded-full blur-2xl" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-rose-400/20 to-transparent rounded-full blur-2xl" />
+                  
+                  <div className="relative flex flex-col items-center gap-3">
+                    {/* Trophy Icon with animation */}
+                    <motion.div
+                      animate={{ 
+                        y: [0, -5, 0],
+                        rotate: [0, -5, 5, 0]
+                      }}
+                      transition={{ 
+                        duration: 3, 
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center shadow-lg"
+                    >
+                      <Crown className="w-8 h-8 text-white" />
+                    </motion.div>
+                    
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-amber-600 via-orange-500 to-rose-500 bg-clip-text text-transparent">
+                        🎉 Você é Premium!
+                      </h3>
+                      <p className="text-muted-foreground mt-1">
+                        Aproveite gerações <span className="font-bold text-amber-600">ilimitadas</span> de gatinhos!
+                      </p>
+                    </div>
+                    
+                    {/* Sparkle decorations */}
+                    <div className="flex gap-2 mt-1">
+                      {[...Array(5)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ 
+                            scale: [1, 1.3, 1],
+                            opacity: [0.5, 1, 0.5]
+                          }}
+                          transition={{ 
+                            duration: 1.5, 
+                            repeat: Infinity,
+                            delay: i * 0.2
+                          }}
+                        >
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
             )}
             
             {generatedImage ? (
